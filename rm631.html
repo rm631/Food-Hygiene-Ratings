@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://www.cs.kent.ac.uk/people/staff/lb514/hygiene/hygiene.php"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/jquery-ui.min.js"></script>
+<link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/themes/smoothness/jquery-ui.css">
+<script>
+$(document).ready(function() {
+	
+	// array for autocomplete
+	var businessNames = [
+		"A La Turka",
+		"Abode Hotel",
+		"Active Life Limited",
+		"Age UK"
+	];
+	
+	// initalial population of the table
+	$.get("https://www.cs.kent.ac.uk/people/staff/lb514/hygiene/hygiene.php", function(data) {
+		$.each(data, function(i, item) {
+		var element = data[i];
+			$('#ratings tbody').append( 
+				"<tr>"
+					+"<td>"+element.business+"</td>"
+					+"<td>"+element.address+"</td>"
+					+"<td>"+element.rating+"</td>"
+					+"<td>"+element.date+"</td>"
+					+"<td>"+'<input type="button" id="ratingBtn_' + i + '" value="Get Rating" class="ratingBtn" />'+"</td>"
+				+"</tr>"
+			);
+		});
+	}, 'json');
+	
+	// Paginator
+	$.get("https://www.cs.kent.ac.uk/people/staff/lb514/hygiene/hygiene.php?op=pages", function(data) {
+		var n; // n is number of buttons
+		$.each(data, function(i, item) {
+			n = item;
+		});
+		for(var i = 1; i <= n; i++) {
+			$('#pages').append('<input type="button" id="btn_' + i + '" value="' + i + '" class="btn" />');
+		}
+	}, 'json');
+	
+	// page changing - on button click
+	$("#pages").on("click", ".btn", function() {
+		var pageNo = $(this).attr("value"); // get the value from the button
+		var query = "https://www.cs.kent.ac.uk/people/staff/lb514/hygiene/hygiene.php?op=retrieve&page=" + pageNo;
+		
+		$("#pageNoInner").text(pageNo);
+		
+		$("#ratings").find("tr:gt(0)").remove(); // clear all but the headings line
+		
+		$.get(query, function(data) {
+			$.each(data, function(i, item) {
+				var element = data[i];
+				$('#ratings tbody').append( 
+					"<tr>"
+						+"<td>"+element.business+"</td>"
+						+"<td>"+element.address+"</td>"
+						+"<td>"+element.rating+"</td>"
+						+"<td>"+element.date+"</td>"
+						+"<td>"+'<input type="button" id="ratingBtn_' + i + '" value="Get Rating" class="ratingBtn" />'+"</td>"
+					+"</tr>"
+				);
+			});
+		}, 'json');
+	});
+	
+	// get a pages customer rating
+	$("#ratings").on("click", ".ratingBtn", function() {
+		var name = $(this).closest('tr').find('td:nth-child(1)').text(); // business name taken from table
+		var address = $(this).closest('tr').find('td:nth-child(2)').text(); // business address taken from table
+		var postcode = address.substr(address.length - 7); // gets postcode (as its always the last 7 chars	
+		
+		var query = "https://www.cs.kent.ac.uk/people/staff/lb514/hygiene/rating.php?name=" + name;
+		
+		$.get(query, function(data) {
+			if(data.length == 0) { alert("No ratings found!"); return true } // if the js object is empty, deal with it
+			
+			$.each(data, function(i, item) {
+				var element = data[i];
+				
+				if(element.address.indexOf(postcode) !== -1) { // if the address contains the postcode
+					alert(element.business + " had a customer rating of " + element.rating + "!");
+					return false;
+				} else { return true; } // to stop the each from breaking too early
+			});
+		}, 'JSON');
+	});
+	
+	// When the user submits the search.. 
+	$("#searchForm").submit(function(e) {
+		// prevent default action
+		e.preventDefault();
+		
+		$("#pageNoInner").text("Search Page");
+		
+		// clear all but the headings line
+		$("#ratings").find("tr:gt(0)").remove(); 
+		
+		var search = $(this).closest("form").find("input[name='searchTerm']").val();
+		var query = "https://www.cs.kent.ac.uk/people/staff/lb514/hygiene/hygiene.php?op=searchname&name=" + search;
+		
+		$.get(query, function(data) {
+			if(data.length == 0) { alert("No results found, please remember searches are case sensitive. Please try again!"); return true; }
+		
+			$.each(data, function(i, item) {
+				var element = data[i];
+				
+				// if the businesses found from the search terms aren't in the array of autocomplete, add them
+				if($.inArray(element.business, businessNames) == -1) {
+					businessNames.push(element.business);
+				}
+				
+				$('#ratings tbody').append( 
+					"<tr>"
+						+"<td>"+element.business+"</td>"
+						+"<td>"+element.address+"</td>"
+						+"<td>"+element.rating+"</td>"
+						+"<td>"+element.date+"</td>"
+						+"<td>"+'<input type="button" id="ratingBtn_' + i + '" value="Get Rating" class="ratingBtn" />'+"</td>"
+					+"</tr>"
+				);
+			});
+		}, 'json');
+		
+	});
+	
+	// autocompletes using the businessNames array on the searchbox when focused
+	$("#searchbox").autocomplete({
+		source: businessNames
+    })
+	
+});
+
+	
+
+</script>
+<style>
+h1 {
+	text-align: center;
+}
+#desc {
+	text-align: center;
+	width: 50vw;
+	padding-left: 23vw;
+}
+#pageNo {
+	text-align: center;
+	font-weight: bold;
+}
+#pages {
+	padding:3vh;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+#ratings {
+	padding: 15vw;
+	border-collapse: collapse;
+	margin:0px auto; 
+	height: 70vw; 
+	width: 90vw;
+}
+#ratings tr:nth-child(even){
+	background-color: #f2f2f2;
+}
+#ratings tr {
+	height: 25px;
+}
+#ratings tr:hover {
+	background-color: #ddd;
+}
+#ratings, th, td {
+    border: 1px solid black;
+}
+#ratings th {
+    height: 50px;
+	background-color: #4CAF50;
+    color: white;
+}
+#ratings td {
+	text-align: centre;
+	overflow: auto;
+}
+#searchForm {
+	margin: 0 auto; 
+	width:350px;
+}
+</style>
+<title>Food Hygiene Ratings</title>
+</head>
+<body>
+<h1>Food Hygiene Ratings</h1>
+
+<div id="desc">This page gets data regarding Businesses, their food hygiene rating (rating column) and their customer rating (the 'get rating button'). You can also search for a specific business with the search bar at the bottom of the page. This search is case sensitive.</div>
+
+<div id="pageNo">Current Page is<div id="pageNoInner">1</div></div>
+
+<div id="pages">
+Pages: 
+</div>
+
+<table id="ratings">
+	<thead>
+	<tr>
+		<th>Business</th>
+		<th>Address</th>
+		<th>Rating</th>
+		<th>Date</th>
+		<th>Rating</th>
+	</tr>
+	</thead>
+	<tbody>
+	</tbody>
+</table>
+<br>
+<form id="searchForm" method="get">
+	<label for="searchbox">Business Name:</label>
+	<input type="text" id="searchbox" name="searchTerm" placeholder="Enter Search terms...">
+	<input type="submit" name="search" value="Search">
+</form>
+
+</body>
+</html>
+
