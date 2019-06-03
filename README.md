@@ -8,4 +8,4 @@ JQuery library (i.e., avoid plain Javascript where jQuery can be used) and, for 
 (and its CSS if you wish). You cannot use any other JQuery plugins, external CSS, or any other JavaScript
 libraries."
 
-Awaiting Grading.
+Total marks: 99%
